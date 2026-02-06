@@ -187,16 +187,16 @@ with col2:
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Payoff","Delta", "Gamma", "Vega", "Theta", "Rho"])
     
     with tab1:
-        st.plotly_chart(fig, use_container_width=True)       
+        st.plotly_chart(fig, width="stretch")       
     with tab2:
-        st.plotly_chart(delta_fig, use_container_width=True) 
+        st.plotly_chart(delta_fig, width="stretch") 
     with tab3:
-        st.plotly_chart(gamma_fig, use_container_width=True)    
+        st.plotly_chart(gamma_fig, width="stretch")    
     with tab4:
-        st.plotly_chart(vega_fig, use_container_width=True)   
+        st.plotly_chart(vega_fig, width="stretch")   
     with tab5:
-        st.plotly_chart(theta_fig, use_container_width=True)   
+        st.plotly_chart(theta_fig, width="stretch")   
     with tab6:
-        st.plotly_chart(rho_fig, use_container_width=True)
+        st.plotly_chart(rho_fig, width="stretch")
 
 
