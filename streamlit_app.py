@@ -1,9 +1,7 @@
-# streamlit run /Users/valentinfaure/Documents/Academique/SKEMA/M2\ -\ FMI/Cours/Python/Pricer\ project/streamlit_app.py
-
 import numpy as np
 from scipy.stats import norm
 import streamlit as st
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 
 st.set_page_config(page_title="Pricer", layout="wide")
 
@@ -39,7 +37,7 @@ def compute_greeks(option_type, S, K, T, r, sigma, q):
         gamma = np.exp(-q * T) * norm.pdf(d1) / (S * sigma * np.sqrt(T))
         theta = ( - (S * sigma * np.exp(-q * T) * norm.pdf(d1)) / (2 * np.sqrt(T))
                   - r * K * np.exp(-r * T) * norm.cdf(d2)
-                  + q * S * np.exp(-q * T) * norm.cdf(d1) ) / 365
+                  + q * S * np.exp(-q * T) * norm.cdf(d1) ) / 252
         vega = S * np.exp(-q * T) * np.sqrt(T) * norm.pdf(d1) / 100
         rho = K * T * np.exp(-r * T) * norm.cdf(d2) / 100
         
@@ -48,7 +46,7 @@ def compute_greeks(option_type, S, K, T, r, sigma, q):
         gamma = np.exp(-q * T) * norm.pdf(d1) / (S * sigma * np.sqrt(T))
         theta = ( - (S * sigma * np.exp(-q * T) * norm.pdf(d1)) / (2 * np.sqrt(T))
                   + r * K * np.exp(-r * T) * norm.cdf(-d2)
-                  - q * S * np.exp(-q * T) * norm.cdf(-d1) ) / 365
+                  - q * S * np.exp(-q * T) * norm.cdf(-d1) ) / 252
         vega = S * np.exp(-q * T) * np.sqrt(T) * norm.pdf(d1) / 100
         rho = -K * T * np.exp(-r * T) * norm.cdf(-d2) / 100
         
@@ -66,16 +64,83 @@ def plot_payoff(option_type, S, K):
         st.error("Type d'option invalide")
         return
 
-    fig, ax = plt.subplots()
-    ax.plot(S_T, payoff, label=f"{option_type} Payoff")
-    ax.axhline(0, color='black', linewidth=0.5)
-    ax.axvline(S, color='red', linestyle='--', label="Spot S")
-    ax.set_xlabel("Price at Maturity S_T")
-    ax.set_ylabel("Payoff")
-    ax.set_title(f"{option_type} Option Payoff at Maturity")
-    ax.legend()
-    ax.grid(True)
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=S_T, y=payoff, mode='lines', name=f"{option_type} Payoff"))
+    
+    # Add Strike Line
+    fig.add_vline(x=K, line_width=1, line_dash="dot", line_color="black", annotation_text="Strike K")
+    
+    # Add Spot Point
+    # Calculate payoff at current Spot S
+    if option_type == "Call":
+        payoff_at_S = max(S - K, 0)
+    else:
+        payoff_at_S = max(K - S, 0)
+        
+    fig.add_trace(go.Scatter(x=[S], y=[payoff_at_S], mode='markers', name="Spot Price", marker=dict(color="red", size=10)))
+
+    fig.update_layout(
+        title=f"{option_type} Option Payoff at Maturity",
+        xaxis_title="Price at Maturity S_T",
+        yaxis_title="Payoff",
+        legend_title="Legend"
+    )
     return fig
+
+
+
+def plot_all_greeks(option_type, S, K, T, r, sigma, q, S_range_factor=0.5):
+    S_min = S * (1 - S_range_factor)
+    S_max = S * (1 + S_range_factor)
+    S_values = np.linspace(S_min, S_max, 200)
+
+    deltas, gammas, thetas, vegas, rhos = [], [], [], [], []
+
+    for s in S_values:
+        delta, gamma, theta, vega, rho = compute_greeks(option_type, s, K, T, r, sigma, q)
+        deltas.append(delta)
+        gammas.append(gamma)
+        thetas.append(theta)
+        vegas.append(vega)
+        rhos.append(rho)
+
+    # Calculate Greeks at current Spot S
+    curr_delta, curr_gamma, curr_theta, curr_vega, curr_rho = compute_greeks(option_type, S, K, T, r, sigma, q)
+
+    # Création des figures
+    delta_fig = go.Figure()
+    delta_fig.add_trace(go.Scatter(x=S_values, y=deltas, mode='lines', name="Delta", line=dict(color="blue")))
+    delta_fig.add_vline(x=K, line_width=1, line_dash="dot", line_color="black", annotation_text="Strike K")
+    delta_fig.add_trace(go.Scatter(x=[S], y=[curr_delta], mode='markers', name="Current Delta", marker=dict(color="red", size=10)))
+    delta_fig.update_layout(title=f"{option_type} Option Delta vs Spot Price", xaxis_title="Spot Price", yaxis_title="Delta")
+
+    gamma_fig = go.Figure()
+    gamma_fig.add_trace(go.Scatter(x=S_values, y=gammas, mode='lines', name="Gamma", line=dict(color="green")))
+    gamma_fig.add_vline(x=K, line_width=1, line_dash="dot", line_color="black", annotation_text="Strike K")
+    gamma_fig.add_trace(go.Scatter(x=[S], y=[curr_gamma], mode='markers', name="Current Gamma", marker=dict(color="red", size=10)))
+    gamma_fig.update_layout(title=f"{option_type} Option Gamma vs Spot Price", xaxis_title="Spot Price", yaxis_title="Gamma")
+
+    theta_fig = go.Figure()
+    theta_fig.add_trace(go.Scatter(x=S_values, y=thetas, mode='lines', name="Theta", line=dict(color="orange")))
+    theta_fig.add_vline(x=K, line_width=1, line_dash="dot", line_color="black", annotation_text="Strike K")
+    theta_fig.add_trace(go.Scatter(x=[S], y=[curr_theta], mode='markers', name="Current Theta", marker=dict(color="red", size=10)))
+    theta_fig.update_layout(title=f"{option_type} Option Theta vs Spot Price", xaxis_title="Spot Price", yaxis_title="Theta")
+
+    vega_fig = go.Figure()
+    vega_fig.add_trace(go.Scatter(x=S_values, y=vegas, mode='lines', name="Vega", line=dict(color="purple")))
+    vega_fig.add_vline(x=K, line_width=1, line_dash="dot", line_color="black", annotation_text="Strike K")
+    vega_fig.add_trace(go.Scatter(x=[S], y=[curr_vega], mode='markers', name="Current Vega", marker=dict(color="red", size=10)))
+    vega_fig.update_layout(title=f"{option_type} Option Vega vs Spot Price", xaxis_title="Spot Price", yaxis_title="Vega")
+
+    rho_fig = go.Figure()
+    rho_fig.add_trace(go.Scatter(x=S_values, y=rhos, mode='lines', name="Rho", line=dict(color="brown")))
+    rho_fig.add_vline(x=K, line_width=1, line_dash="dot", line_color="black", annotation_text="Strike K")
+    rho_fig.add_trace(go.Scatter(x=[S], y=[curr_rho], mode='markers', name="Current Rho", marker=dict(color="red", size=10)))
+    rho_fig.update_layout(title=f"{option_type} Option Rho vs Spot Price", xaxis_title="Spot Price", yaxis_title="Rho")
+
+    # Retourne un dictionnaire avec toutes les figures
+    return delta_fig, gamma_fig,theta_fig,vega_fig,rho_fig
+
 
 
 
@@ -95,7 +160,7 @@ with col1:
 price = compute_black_scholes_price(option_type, S, K, T, r, sigma, q)
 delta, gamma, theta, vega, rho = compute_greeks(option_type, S, K, T, r, sigma, q)
 fig = plot_payoff(option_type, S, K)
-
+delta_fig, gamma_fig,theta_fig,vega_fig,rho_fig = plot_all_greeks(option_type, S, K, T, r, sigma, q)
 
 with col2:
     
@@ -111,17 +176,27 @@ with col2:
             st.metric(label="Gamma", value=round(gamma,2))
     with col4:
         with st.container(border=True):
-            st.metric(label="Theta", value=round(theta,2))
+            st.metric(label="Vega", value=round(vega,2))
     with col5:
         with st.container(border=True):
-            st.metric(label="Vega", value=round(vega,2))
+            st.metric(label="Theta", value=round(theta,2))
     with col6:
         with st.container(border=True):
             st.metric(label="Rho", value=round(rho,2))
     
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Payoff","Delta", "Gamma", "Theta", "Vega", "Rho"])
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Payoff","Delta", "Gamma", "Vega", "Theta", "Rho"])
     
     with tab1:
-        st.pyplot(fig)
+        st.plotly_chart(fig, use_container_width=True)       
+    with tab2:
+        st.plotly_chart(delta_fig, use_container_width=True) 
+    with tab3:
+        st.plotly_chart(gamma_fig, use_container_width=True)    
+    with tab4:
+        st.plotly_chart(vega_fig, use_container_width=True)   
+    with tab5:
+        st.plotly_chart(theta_fig, use_container_width=True)   
+    with tab6:
+        st.plotly_chart(rho_fig, use_container_width=True)
 
 
