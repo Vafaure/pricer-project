@@ -2,6 +2,7 @@ import numpy as np
 from scipy.stats import norm
 import streamlit as st
 import plotly.graph_objects as go
+from streamlit_option_menu import option_menu
 
 st.set_page_config(page_title="Pricer", layout="wide")
 
@@ -142,61 +143,113 @@ def plot_all_greeks(option_type, S, K, T, r, sigma, q, S_range_factor=0.5):
     return delta_fig, gamma_fig,theta_fig,vega_fig,rho_fig
 
 
-
-
-col1, col2 = st.columns([1,3])
-
-with col1:
-    with st.container(border=True):
-        st.markdown("#### Parameters")
-        option_type= st.pills("Option type", ["Call","Put"], default="Call")
-        S = st.number_input("Spot price", value=100, min_value=0)
-        K = st.number_input("Strike", value=100, min_value=0)
-        T = st.number_input("Time to maturity (in years)", value=1.0, min_value=0.001)
-        r = st.number_input("Risk-free rate", value=0.05)
-        sigma = st.number_input("Volatility", value=0.2, min_value=0.001)
-        q = st.number_input("Dividend yield", value=0.02)
-
-price = compute_black_scholes_price(option_type, S, K, T, r, sigma, q)
-delta, gamma, theta, vega, rho = compute_greeks(option_type, S, K, T, r, sigma, q)
-fig = plot_payoff(option_type, S, K)
-delta_fig, gamma_fig,theta_fig,vega_fig,rho_fig = plot_all_greeks(option_type, S, K, T, r, sigma, q)
-
-with col2:
+def black_scholes_page():
+    col1, col2 = st.columns([1,3])
     
-    col1,col2,col3,col4,col5,col6 = st.columns(6)
     with col1:
         with st.container(border=True):
-            st.metric(label="Price", value=round(price,2))
+            st.markdown("#### Parameters")
+            option_type= st.pills("Option type", ["Call","Put"], default="Call")
+            S = st.number_input("Spot price", value=100.0, min_value=0.0)
+            K = st.number_input("Strike", value=100.0, min_value=0.0)
+            T = st.number_input("Time to maturity (in years)", value=1.0, min_value=0.001)
+            r = st.number_input("Risk-free rate", value=0.05)
+            sigma = st.number_input("Volatility", value=0.2, min_value=0.001)
+            q = st.number_input("Dividend yield", value=0.02)
+
+    price = compute_black_scholes_price(option_type, S, K, T, r, sigma, q)
+    delta, gamma, theta, vega, rho = compute_greeks(option_type, S, K, T, r, sigma, q)
+    fig = plot_payoff(option_type, S, K)
+    delta_fig, gamma_fig,theta_fig,vega_fig,rho_fig = plot_all_greeks(option_type, S, K, T, r, sigma, q)
+
     with col2:
-        with st.container(border=True):
-            st.metric(label="Delta", value=round(delta,2))
-    with col3:
-        with st.container(border=True):
-            st.metric(label="Gamma", value=round(gamma,2))
-    with col4:
-        with st.container(border=True):
-            st.metric(label="Vega", value=round(vega,2))
-    with col5:
-        with st.container(border=True):
-            st.metric(label="Theta", value=round(theta,2))
-    with col6:
-        with st.container(border=True):
-            st.metric(label="Rho", value=round(rho,2))
+        
+        col1,col2,col3,col4,col5,col6 = st.columns(6)
+        with col1:
+            with st.container(border=True):
+                st.metric(label="Price", value=round(price,2))
+        with col2:
+            with st.container(border=True):
+                st.metric(label="Delta", value=round(delta,2))
+        with col3:
+            with st.container(border=True):
+                st.metric(label="Gamma", value=round(gamma,2))
+        with col4:
+            with st.container(border=True):
+                st.metric(label="Vega", value=round(vega,2))
+        with col5:
+            with st.container(border=True):
+                st.metric(label="Theta", value=round(theta,2))
+        with col6:
+            with st.container(border=True):
+                st.metric(label="Rho", value=round(rho,2))
+        
+        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Payoff","Delta", "Gamma", "Vega", "Theta", "Rho"])
+        
+        with tab1:
+            st.plotly_chart(fig, width="stretch")       
+        with tab2:
+            st.plotly_chart(delta_fig, width="stretch") 
+        with tab3:
+            st.plotly_chart(gamma_fig, width="stretch")    
+        with tab4:
+            st.plotly_chart(vega_fig, width="stretch")   
+        with tab5:
+            st.plotly_chart(theta_fig, width="stretch")   
+        with tab6:
+            st.plotly_chart(rho_fig, width="stretch")
+
+
+def autocall_pricer_page():
     
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Payoff","Delta", "Gamma", "Vega", "Theta", "Rho"])
+    col1, col2 = st.columns([1, 2])
     
-    with tab1:
-        st.plotly_chart(fig, width="stretch")       
-    with tab2:
-        st.plotly_chart(delta_fig, width="stretch") 
-    with tab3:
-        st.plotly_chart(gamma_fig, width="stretch")    
-    with tab4:
-        st.plotly_chart(vega_fig, width="stretch")   
-    with tab5:
-        st.plotly_chart(theta_fig, width="stretch")   
-    with tab6:
-        st.plotly_chart(rho_fig, width="stretch")
+    with col1:
+        with st.container(border=True):
+            st.markdown("#### Market Parameters")
+            S = st.number_input("Spot Price", value=100.0, min_value=0.0, key="auto_S")
+            r = st.number_input("Risk-free Rate", value=0.05, key="auto_r")
+            sigma = st.number_input("Volatility", value=0.2, min_value=0.001, key="auto_sigma")
+            q = st.number_input("Dividend Yield", value=0.02, key="auto_q")
+            
+        with st.container(border=True):
+            st.markdown("#### Product Features")
+            nominal = st.number_input("Nominal Amount", value=1000.0, min_value=0.0, key="auto_nom")
+            T = st.number_input("Maturity (Years)", value=5.0, min_value=0.5, key="auto_T")
+            barrier = st.number_input("Autocall Barrier (% of Initial)", value=100.0, key="auto_bar")
+            coupon = st.number_input("Coupon Rate (%)", value=8.0, key="auto_coup")
+            obs_freq = st.selectbox("Observation Frequency", ["Monthly", "Quarterly", "Semiannually", "Annually"], key="auto_freq")
+
+    with col2:
+        st.info("Pricing logic for Autocall to be implemented.")
+        st.write("Current Parameters:")
+        st.json({
+            "Spot": S,
+            "Rate": r,
+            "Volatility": sigma,
+            "Dividend": q,
+            "Nominal": nominal,
+            "Maturity": T,
+            "Barrier": barrier,
+            "Coupon": coupon,
+            "Frequency": obs_freq
+        })
+
+
+def exotic_option_page():
+    st.info("Pricing logic for Exotic Options to be implemented.")
+
+
+# Sidebar Navigation
+page = option_menu(None, ["Vanilla Option", "Exotic Option", "Autocall Pricer"], 
+    icons=['graph-up', 'calculator', 'clipboard-data'], menu_icon="cast", default_index=0, orientation="horizontal")
+
+if page == "Vanilla Option":
+    black_scholes_page()
+elif page == "Autocall Pricer":
+    autocall_pricer_page()
+elif page == "Exotic Option":
+    exotic_option_page()
+
 
 
